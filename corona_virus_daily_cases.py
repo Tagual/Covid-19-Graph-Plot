@@ -6,6 +6,9 @@ import os
 import time
 import datetime
 
+import plotly.express as px
+import plotly as py
+import plotly.graph_objs as go
 
 
 def get_covid_data():
@@ -25,7 +28,7 @@ def get_covid_data():
         # Download fresh data
         if time_since_modification > 6:
             urllib.request.urlretrieve(url, 'coronavirus_data.csv')
-            print("The most recent available data has been downloaded")
+            print("The most recent available data has been downloaded.")
         else:
             # Convert unix timestamp of modified file to readable format
             formatted_m_time = datetime.datetime.fromtimestamp(
@@ -36,47 +39,85 @@ def get_covid_data():
     else:
         # Obtain data for the first time
         urllib.request.urlretrieve(url, 'coronavirus_data.csv')
-        print("The new data has been downloaded")
-
-
-
+        print("Your data has been downloaded.")
 
 def country_choice_and_cumulative_or_daily_cases():
     """ 
     Ask the user what country to see the data from
     Ask the user if they would like to see cumulative/daily cases
     """
-    
+
+    # Ask the user what country they would like to see
+    user_input_country = input(
+        "Which region would you like to see data about?"
+        " (world statistics are also available)  - "
+    )
+
     # Open the CSV, obtain headers
     filename = 'coronavirus_data.csv'
     with open(filename) as f:
         reader = csv.reader(f)
-    
-        # Ask the user what country they would like to see
-        user_input_country = input(
-            "Which country would you like to see data about? - "
-        )
 
-        header_row = next(reader)
         # Print out header rows
+        header_row = next(reader)
         for index, column_header in enumerate(header_row):
             print(f"{index} - {column_header.title().replace('_', ' ')}")
 
-        user_input_statistic = input(
-        "Which statistic would you like to see data about? "
+        # Ask what statistic they would like to see data for
+        user_input_stat = input(
+            "Which statistic would you like to see data about? "
             "(See above, type the appropriate number) - "
         )
 
+        # Append region's data to a new list
+        selected_region = []
+        for row in reader:
+            if user_input_country.title() in row:
+                selected_region.append(row)
 
-    
-
-
-
-def create_x_and_y_values():
-    """ Generate x, y lists from CSV data """
+        # Append the users chosen dataset to a new list
+        stat_data = []
+        for chosen_statistic in selected_region:
+            stat_data.append(chosen_statistic[int(user_input_stat)])
+        
+        # Append the corresponding dates to the data
+        stat_dates = []
+        for dates in selected_region:
+            stat_dates.append(dates[3])
+        
+    return stat_dates, stat_data
 
 def plot_graph():
     """ Plot the graph """
 
-get_covid_data()
-country_choice_and_cumulative_or_daily_cases()
+    dataset = country_choice_and_cumulative_or_daily_cases()
+    trace_1 = {
+        "x": dataset[0],
+        "y": dataset[1],
+        "line": {
+            "color": "#385965", 
+            "width": 1.5,
+        },
+        "mode": "lines",
+        "name": "France",
+        "type": "scatter",
+    }
+    layout = {
+        "showlegend": True,
+        "title": {"text": "New Daily Cases of COVID-19 in France"},
+        "xaxis": {
+            "rangeslider": {"visible": True},
+            "title": {"text": "Date"},
+            "zeroline": False,
+        },
+        "yaxis": {
+            "title":{"text": "Number of new cases per day"},
+            "zeroline": False,
+        },
+    }
+    
+    fig = go.Figure(data = trace_1, layout = layout)
+    py.offline.plot(fig, filename="test.html")
+
+
+plot_graph()
