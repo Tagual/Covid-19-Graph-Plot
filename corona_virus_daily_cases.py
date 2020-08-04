@@ -10,6 +10,8 @@ import plotly.express as px
 import plotly as py
 import plotly.graph_objs as go
 
+rows = []
+header_row = []
 
 def get_covid_data():
     """ Obtain newest CSV of Covid-19 Data """
@@ -41,37 +43,61 @@ def get_covid_data():
         urllib.request.urlretrieve(url, 'coronavirus_data.csv')
         print("Your data has been downloaded.")
 
-def country_choice_and_cumulative_or_daily_cases():
+def convert_csv_into_lists():
     """ 
-    Ask the user what country to see the data from
-    Ask the user if they would like to see cumulative/daily cases
+    Convert CSV file into a into to quit out the reading loop
     """
-
-    # Ask the user what country they would like to see
-    user_input_country = input(
-        "Which region would you like to see data about?"
-        " (world statistics are also available)  - "
-    )
-
+    # Import global variables
+    global rows, header_row
+    
     # Open the CSV, obtain headers
     filename = 'coronavirus_data.csv'
     with open(filename) as f:
         reader = csv.reader(f)
 
-        # Print out header rows
+        # Obtain column headers
         header_row = next(reader)
-        for index, column_header in enumerate(header_row):
+        
+        # Append data to global list, making it accessible outside the function
+        for row in reader:
+            rows.append(row)
+    return
+    
+def get_countries_and_stats_requested():
+    """ 
+    Ask the user which countries/statistics they would like to compare
+    """
+    convert_csv_into_lists()
+    # Import global variables
+    global rows, header_row
+
+    # Print out the potential statistics to compare
+    for index, column_header in enumerate(header_row):
             print(f"{index} - {column_header.title().replace('_', ' ')}")
+    # Ask what statistic they would like to see data for
+    user_input_stat = input(
+        "Which statistic would you like to see data about? "
+        "(See above, type the appropriate number) - "
+    )
+    # Ask the user how many countries they would like to compare
+    user_number_of_countries = input(
+        "How many countries would you like to compare? (Maximum 5) - "
+    )
+    # Create dict to store countries data, and a list for corresponding dates
+    dict_countries_data = {}
+    stat_dates = []
+    for dates in rows:
+        stat_dates.append(dates[3])
 
-        # Ask what statistic they would like to see data for
-        user_input_stat = input(
-            "Which statistic would you like to see data about? "
-            "(See above, type the appropriate number) - "
+    # Loop over data x amount of the times the user requires
+    for num_countries in range(int(user_number_of_countries)):
+        # Ask the user which countries they would like to see
+        user_input_country = input(
+            "Which region would you like to see data about? "
         )
-
         # Append region's data to a new list
         selected_region = []
-        for row in reader:
+        for row in rows:
             if user_input_country.title() in row:
                 selected_region.append(row)
 
@@ -80,44 +106,71 @@ def country_choice_and_cumulative_or_daily_cases():
         for chosen_statistic in selected_region:
             stat_data.append(chosen_statistic[int(user_input_stat)])
         
-        # Append the corresponding dates to the data
-        stat_dates = []
-        for dates in selected_region:
-            stat_dates.append(dates[3])
+        dict_countries_data[user_input_country.title()] = stat_data
         
-    return stat_dates, stat_data
+    return stat_dates, dict_countries_data
 
 def plot_graph():
     """ Plot the graph """
+    dataset = get_countries_and_stats_requested()
+    
+    # Append data to lists to make them accessible for plotting
+    countries = []
+    countries_data = []
+    for country, data in dataset[1].items():
+        countries.append(country)
+        countries_data.append(data)
 
-    dataset = country_choice_and_cumulative_or_daily_cases()
-    trace_1 = {
+    # for country, data in dataset[1].items():
+    for num_countries in range(len(dataset[1])): 
         "x": dataset[0],
-        "y": dataset[1],
+        "y": data,
         "line": {
             "color": "#385965", 
             "width": 1.5,
         },
         "mode": "lines",
-        "name": "France",
+        "name": country,
         "type": "scatter",
     }
-    layout = {
-        "showlegend": True,
-        "title": {"text": "New Daily Cases of COVID-19 in France"},
-        "xaxis": {
-            "rangeslider": {"visible": True},
-            "title": {"text": "Date"},
-            "zeroline": False,
-        },
-        "yaxis": {
-            "title":{"text": "Number of new cases per day"},
-            "zeroline": False,
-        },
-    }
-    
-    fig = go.Figure(data = trace_1, layout = layout)
-    py.offline.plot(fig, filename="test.html")
 
+    
+
+    
+        
+
+
+    #     traces.append(x)
+    
+    # trace_1 = {
+    #     "x": dataset[0],
+    #     "y": dataset[1],
+    #     "line": {
+    #         "color": "#385965", 
+    #         "width": 1.5,
+    #     },
+    #     "mode": "lines",
+    #     "name": "France",
+    #     "type": "scatter",
+    # }
+    # layout = {
+    #     "showlegend": True,
+    #     "title": {"text": "New Daily Cases of COVID-19 in France"},
+    #     "xaxis": {
+    #         "rangeslider": {"visible": True},
+    #         "title": {"text": "Date"},
+    #         "zeroline": False,
+    #     },
+    #     "yaxis": {
+    #         "title":{"text": "Number of new cases per day"},
+    #         "zeroline": False,
+    #     },
+    # }
+    
+    # fig = go.Figure(data = data, layout = layout)
+    # py.offline.plot(fig, filename="test.html")
+
+
+# plot_graph()
 
 plot_graph()
